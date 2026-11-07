@@ -1,0 +1,48 @@
+{
+  "questions": 15,
+  "repeats": 3,
+  "results": {
+    "1": {
+      "vector": {
+        "recall_at_k": 1.0,
+        "precision_at_k": 1.0,
+        "mrr_at_k": 1.0,
+        "latency_median_ms": 159.63
+      },
+      "hybrid": {
+        "recall_at_k": 1.0,
+        "precision_at_k": 1.0,
+        "mrr_at_k": 1.0,
+        "latency_median_ms": 130.55
+      }
+    },
+    "2": {
+      "vector": {
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.5,
+        "mrr_at_k": 1.0,
+        "latency_median_ms": 132.09
+      },
+      "hybrid": {
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.5,
+        "mrr_at_k": 1.0,
+        "latency_median_ms": 162.51
+      }
+    },
+    "4": {
+      "vector": {
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.25,
+        "mrr_at_k": 1.0,
+        "latency_median_ms": 162.53
+      },
+      "hybrid": {
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.25,
+        "mrr_at_k": 1.0,
+        "latency_median_ms": 177.15
+      }
+    }
+  }
+}

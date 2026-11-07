@@ -1,0 +1,47 @@
+{
+  "model": "qwen3:1.7b",
+  "cases": 3,
+  "scored_cases": 2,
+  "mean_faithfulness": 1.0,
+  "results": [
+    {
+      "question": "How far in advance must vacation requests be submitted?",
+      "answer": "[1] Vacation requests must be submitted at least 14 calendar days before the first day of leave.",
+      "abstained": false,
+      "source_ids": [
+        18,
+        23,
+        20,
+        19
+      ],
+      "faithfulness": null,
+      "evaluation_error": "IncompleteOutputException: "
+    },
+    {
+      "question": "How many days per week may staff work remotely?",
+      "answer": "[1] Harborview | Synthetic Demo Knowledge harborview_employee_handbook.pdf page 2: Employees may work remotely up to three days each week with manager approval.",
+      "abstained": false,
+      "source_ids": [
+        19,
+        18,
+        20,
+        9
+      ],
+      "faithfulness": 1.0,
+      "evaluation_error": null
+    },
+    {
+      "question": "When must employees report a lost laptop?",
+      "answer": "[1] Lost equipment must be reported to IT within 24 hours.",
+      "abstained": false,
+      "source_ids": [
+        22,
+        11,
+        26,
+        27
+      ],
+      "faithfulness": 1.0,
+      "evaluation_error": null
+    }
+  ]
+}

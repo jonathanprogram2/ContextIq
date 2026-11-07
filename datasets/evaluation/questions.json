@@ -1,0 +1,92 @@
+[
+  {
+    "question": "How far in advance must vacation requests be submitted?",
+    "relevant_chunk_ids": [
+      18
+    ]
+  },
+  {
+    "question": "How many days per week may staff work remotely?",
+    "relevant_chunk_ids": [
+      19
+    ]
+  },
+  {
+    "question": "When must employees report a lost laptop?",
+    "relevant_chunk_ids": [
+      22
+    ]
+  },
+  {
+    "question": "How much is the annual learning allowance?",
+    "relevant_chunk_ids": [
+      24
+    ]
+  },
+  {
+    "question": "Where do employees assemble during an office evacuation?",
+    "relevant_chunk_ids": [
+      26
+    ]
+  },
+  {
+    "question": "How many approving reviews are needed to merge to main?",
+    "relevant_chunk_ids": [
+      8
+    ]
+  },
+  {
+    "question": "When are routine production deployments scheduled?",
+    "relevant_chunk_ids": [
+      9
+    ]
+  },
+  {
+    "question": "How many search API requests are allowed per minute per token?",
+    "relevant_chunk_ids": [
+      10
+    ]
+  },
+  {
+    "question": "How frequently do PostgreSQL backups run?",
+    "relevant_chunk_ids": [
+      12
+    ]
+  },
+  {
+    "question": "What is the target p95 search latency for load tests?",
+    "relevant_chunk_ids": [
+      17
+    ]
+  },
+  {
+    "question": "How many people should take part in the initial usability interview round?",
+    "relevant_chunk_ids": [
+      28
+    ]
+  },
+  {
+    "question": "Which accessibility standard is the web interface targeting?",
+    "relevant_chunk_ids": [
+      30
+    ]
+  },
+  {
+    "question": "What unassisted onboarding task completion rate is the target?",
+    "relevant_chunk_ids": [
+      32
+    ]
+  },
+  {
+    "question": "When should raw interview recordings be deleted?",
+    "relevant_chunk_ids": [
+      33
+    ]
+  },
+  {
+    "question": "What is the primary onboarding analytics event?",
+    "relevant_chunk_ids": [
+      35
+    ]
+  }
+]

@@ -6,6 +6,7 @@ import psycopg
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.agentic import router as agent_router
 from app.documents import router as documents_router
 from app.rag import router as rag_router
 
@@ -18,6 +19,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="ContextIQ API", version="0.1.0", lifespan=lifespan)
 app.include_router(documents_router)
 app.include_router(rag_router)
+app.include_router(agent_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],

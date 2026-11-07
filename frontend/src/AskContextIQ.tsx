@@ -60,10 +60,14 @@ export default function AskContextIQ() {
     setResult(null);
     setNotice("Searching local documents and generating an answer...");
     try {
-      const response = await fetch("/api/rag/ask", {
+      const response = await fetch("/api/agent/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: question.trim(), top_k: 4 }),
+        body: JSON.stringify({
+          question: question.trim(),
+          top_k: 4,
+          mode: "hybrid",
+        }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail ?? "Question failed");

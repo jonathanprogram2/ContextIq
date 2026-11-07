@@ -1,0 +1,92 @@
+[
+  {
+    "question": "How far in advance must vacation requests be submitted?",
+    "filename": "harborview_employee_handbook.pdf",
+    "page_number": 1,
+    "evidence_anchor": "Vacation requests must be submitted at least 14 calendar days"
+  },
+  {
+    "question": "How many days per week may staff work remotely?",
+    "filename": "harborview_employee_handbook.pdf",
+    "page_number": 2,
+    "evidence_anchor": "remotely up to three days each week"
+  },
+  {
+    "question": "When must employees report a lost laptop?",
+    "filename": "harborview_employee_handbook.pdf",
+    "page_number": 5,
+    "evidence_anchor": "Lost equipment must be reported to IT within 24 hours"
+  },
+  {
+    "question": "How much is the annual learning allowance?",
+    "filename": "harborview_employee_handbook.pdf",
+    "page_number": 7,
+    "evidence_anchor": "learning allowance of 600 US dollars per year"
+  },
+  {
+    "question": "Where do employees assemble during an office evacuation?",
+    "filename": "harborview_employee_handbook.pdf",
+    "page_number": 9,
+    "evidence_anchor": "assemble at the west parking lot by the blue sign"
+  },
+  {
+    "question": "How many approving reviews are needed to merge to main?",
+    "filename": "harborview_developer_runbook.pdf",
+    "page_number": 1,
+    "evidence_anchor": "main branch requires two approving reviews"
+  },
+  {
+    "question": "When are routine production deployments scheduled?",
+    "filename": "harborview_developer_runbook.pdf",
+    "page_number": 2,
+    "evidence_anchor": "Tuesday and Thursday between 13:00 and 16:00 Eastern Time"
+  },
+  {
+    "question": "How many search API requests are allowed per minute per token?",
+    "filename": "harborview_developer_runbook.pdf",
+    "page_number": 3,
+    "evidence_anchor": "120 requests per minute per service token"
+  },
+  {
+    "question": "How frequently do PostgreSQL backups run?",
+    "filename": "harborview_developer_runbook.pdf",
+    "page_number": 5,
+    "evidence_anchor": "PostgreSQL backups run every 6 hours"
+  },
+  {
+    "question": "What is the target p95 search latency for load tests?",
+    "filename": "harborview_developer_runbook.pdf",
+    "page_number": 10,
+    "evidence_anchor": "p95 search response time below 400 milliseconds"
+  },
+  {
+    "question": "How many people should take part in the initial usability interview round?",
+    "filename": "harborview_research_methods.pdf",
+    "page_number": 1,
+    "evidence_anchor": "Recruit 8 participants for each initial usability interview round"
+  },
+  {
+    "question": "Which accessibility standard is the web interface targeting?",
+    "filename": "harborview_research_methods.pdf",
+    "page_number": 3,
+    "evidence_anchor": "WCAG 2.2 Level AA"
+  },
+  {
+    "question": "What unassisted onboarding task completion rate is the target?",
+    "filename": "harborview_research_methods.pdf",
+    "page_number": 5,
+    "evidence_anchor": "at least 85 percent unassisted task completion"
+  },
+  {
+    "question": "When should raw interview recordings be deleted?",
+    "filename": "harborview_research_methods.pdf",
+    "page_number": 6,
+    "evidence_anchor": "Recordings are deleted after 30 days"
+  },
+  {
+    "question": "What is the primary onboarding analytics event?",
+    "filename": "harborview_research_methods.pdf",
+    "page_number": 8,
+    "evidence_anchor": "primary onboarding event is onboarding_completed"
+  }
+]
