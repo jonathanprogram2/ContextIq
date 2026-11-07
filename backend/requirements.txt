@@ -11,3 +11,5 @@ langgraph>=1.0,<2
 ragas>=0.4.3,<0.5
 openai>=1.0
 langchain-community==0.3.31
+torch>=2.4,<3
+sentence-transformers>=3,<6

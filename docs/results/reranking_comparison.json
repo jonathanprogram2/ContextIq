@@ -1,0 +1,48 @@
+{
+  "cases": 15,
+  "candidate_k": 12,
+  "device": "cpu",
+  "model": "cross-encoder/ms-marco-MiniLM-L6-v2",
+  "results": {
+    "hybrid": {
+      "1": {
+        "recall_at_k": 1.0,
+        "precision_at_k": 1.0,
+        "mrr_at_k": 1.0,
+        "median_total_latency_ms": 70.0
+      },
+      "2": {
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.5,
+        "mrr_at_k": 1.0,
+        "median_total_latency_ms": 70.0
+      },
+      "4": {
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.25,
+        "mrr_at_k": 1.0,
+        "median_total_latency_ms": 70.0
+      }
+    },
+    "hybrid+rerank": {
+      "1": {
+        "recall_at_k": 1.0,
+        "precision_at_k": 1.0,
+        "mrr_at_k": 1.0,
+        "median_total_latency_ms": 126.74
+      },
+      "2": {
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.5,
+        "mrr_at_k": 1.0,
+        "median_total_latency_ms": 126.74
+      },
+      "4": {
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.25,
+        "mrr_at_k": 1.0,
+        "median_total_latency_ms": 126.74
+      }
+    }
+  }
+}
