@@ -1,0 +1,16 @@
+.rag-page .rag-panel{padding:24px;background:#111c2c;border:1px solid #2a3e58;border-radius:14px;margin:24px 0;color:#dce7fa}
+.rag-page .rag-panel h2{font-size:20px;margin:0 0 18px}
+.rag-page .rag-panel h3{margin-top:24px}
+.rag-page button{background:#27538d;color:white;border:1px solid #3a6197;border-radius:8px;padding:11px 17px;cursor:pointer}
+.rag-page button:disabled{opacity:.45;cursor:not-allowed}
+.rag-document{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #2a3e58;padding:16px 0;gap:16px}
+.rag-document:first-of-type{border-top:none}
+.rag-document small,.rag-source small{display:block;color:#8fa5c2;margin-top:6px}
+.rag-panel form{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.rag-panel form label{font-weight:600}
+.rag-panel textarea{box-sizing:border-box;width:100%;border:1px solid #3b4f6b;border-radius:9px;padding:12px;background:#0b1321;color:#fff;font:inherit}
+.rag-notice{color:#aac9ff}.rag-error{background:#48232e;color:#ffabb7;padding:14px;border-radius:9px}
+.rag-source{border-top:1px solid #32445c;padding:16px 0}
+.rag-source p{color:#b1c3dc;line-height:1.65;white-space:pre-wrap}
+.rag-source a{color:#8fb9ff}.rag-hint{color:#9aadca;font-size:13px}
+.rag-answer{white-space:pre-wrap;line-height:1.7}

@@ -1,0 +1,19 @@
+.sidebar nav button.nav-item {display:block;width:100%;border:0;background:transparent;text-align:left;font-family:inherit;cursor:pointer}
+.sidebar nav button.nav-item.active{background:#1d3353}
+.sidebar nav button.nav-item:hover{color:#fff}
+.upload-panel{display:flex;align-items:center;gap:16px;flex-wrap:wrap;border:1px solid #334660;border-radius:13px;background:#111c2c;padding:22px;margin-bottom:26px}
+.upload-panel label{font-weight:650;font-size:14px}
+.upload-panel input{max-width:100%;font-size:13px;color:#b8c7df}
+.upload-panel button,.documents-heading button,.document-card button{border:1px solid #385580;background:#21487c;color:#fff;padding:10px 14px;border-radius:8px;cursor:pointer}
+.upload-panel button:disabled{opacity:.5;cursor:not-allowed}
+.documents-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.documents-heading button,.document-card button{font-size:12px;background:#162d4d}
+.document-list{display:grid;gap:13px}
+.document-card{display:flex;align-items:center;flex-wrap:wrap;gap:16px;background:#111c2c;border:1px solid #273449;border-radius:13px;padding:18px}
+.document-card>div{flex:1;min-width:180px}
+.document-card strong{overflow-wrap:anywhere}
+.document-card p,.subdued{font-size:12px;color:#8c9db5}
+.document-card a{font-size:12px;color:#8db8f8}
+.error-message{padding:12px 15px;border-radius:8px;color:#ffb8b8;background:#3f1f28}
+.page-preview{margin-top:25px;padding:20px;border:1px solid #334660;border-radius:12px}
+.page-preview pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;color:#c1d2eb;font:12px/1.65 ui-monospace,monospace}
