@@ -21,6 +21,7 @@ async def lifespan(app: FastAPI):
     yield
 
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 session_secret = os.getenv("CONTEXTIQ_SESSION_SECRET")
 
