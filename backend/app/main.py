@@ -1,12 +1,17 @@
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import httpx
 import psycopg
-from fastapi import FastAPI
+from dotenv import load_dotenv
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.agentic import router as agent_router
+from app.auth import require_auth
+from app.auth import router as auth_router
 from app.documents import router as documents_router
 from app.rag import router as rag_router
 
@@ -15,11 +20,31 @@ from app.rag import router as rag_router
 async def lifespan(app: FastAPI):
     yield
 
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
+session_secret = os.getenv("CONTEXTIQ_SESSION_SECRET")
+
+if not session_secret:
+    raise RuntimeError(
+        "CONTEXTIQ_SESSION_SECRET must be configured"
+    )
 app = FastAPI(title="ContextIQ API", version="0.1.0", lifespan=lifespan)
-app.include_router(documents_router)
-app.include_router(rag_router)
-app.include_router(agent_router)
+app.include_router(auth_router)
+
+app.include_router(
+    documents_router,
+    dependencies=[Depends(require_auth)],
+)
+
+app.include_router(
+    rag_router,
+    dependencies=[Depends(require_auth)],
+)
+
+app.include_router(
+    agent_router,
+    dependencies=[Depends(require_auth)],
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -27,7 +52,14 @@ app.add_middleware(
     allow_methods=["GET"],
     allow_headers=["*"],
 )
-
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=session_secret,
+    session_cookie="contextiq_session",
+    same_site="strict",
+    https_only=False,
+    max_age=3600,
+)
 
 @app.get("/api/health")
 def health():

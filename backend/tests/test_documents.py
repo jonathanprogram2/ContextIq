@@ -1,6 +1,8 @@
 import pymupdf
+import pytest
 from fastapi.testclient import TestClient
 
+from app.auth import require_auth
 from app.documents import parse_pdf
 from app.main import app
 
@@ -42,3 +44,9 @@ def test_oversized_pdf_rejected():
         files={"file": ("big.pdf", b"%PDF-" + b"x" * (10 * 1024 * 1024), "application/pdf")},
     )
     assert response.status_code == 413
+
+@pytest.fixture(autouse=True)
+def authenticated_document_tests():
+    app.dependency_overrides[require_auth] = lambda: None
+    yield
+    app.dependency_overrides.pop(require_auth, None)
