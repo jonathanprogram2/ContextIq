@@ -3,6 +3,7 @@ import DocumentLibrary from "./DocumentLibrary";
 import AskContextIQ from "./AskContextIQ";
 import "./App.css";
 import "./phase2.css";
+import Login from "./Login";
 
 type Readiness = { status: string; checks: Record<string, string> };
 
@@ -13,6 +14,9 @@ export default function App() {
   });
   const [api, setApi] = useState("checking");
   const [readiness, setReadiness] = useState<Readiness | null>(null);
+  const [auth, setAuth] = useState<"checking" | "authenticated" | "anonymous">(
+    "checking",
+  );
 
   useEffect(() => {
     fetch("/api/health")
@@ -30,6 +34,22 @@ export default function App() {
       .then(setReadiness)
       .catch(() => setReadiness(null));
   }, []);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((response) => {
+        setAuth(response.ok ? "authenticated" : "anonymous");
+      })
+      .catch(() => setAuth("anonymous"));
+  }, []);
+
+  if (auth === "checking") {
+    return <main className="login-page">Checking session...</main>;
+  }
+
+  if (auth === "anonymous") {
+    return <Login onAuthenticated={() => setAuth("authenticated")} />;
+  }
 
   return (
     <div className="shell">
@@ -65,6 +85,21 @@ export default function App() {
             }}
           >
             ◇ &nbsp; Ask ContextIQ
+          </button>
+          <button
+            type="button"
+            className="nav-item"
+            onClick={async () => {
+              const response = await fetch("/api/auth/logout", {
+                method: "POST",
+              });
+
+              if (response.ok || response.status === 401) {
+                setAuth("anonymous");
+              }
+            }}
+          >
+            Sign out
           </button>
         </nav>
         <div className="sidebar-bottom">

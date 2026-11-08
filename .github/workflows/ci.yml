@@ -18,6 +18,8 @@ jobs:
     name: Python Tests & Lint
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      CONTEXTIQ_SESSION_SECRET: ci-test-secret-not-for-production
 
     defaults:
       run:
