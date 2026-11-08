@@ -29,3 +29,13 @@ backups/
 # Private documents
 *.pdf
 !datasets/demo/*.pdf
+# Terraform local state and working files
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfplan
+crash.log
+
+# Keep provider dependency lockfiles tracked
+!.terraform.lock.hcl
