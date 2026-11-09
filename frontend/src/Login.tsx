@@ -6,6 +6,7 @@ type Props = {
 };
 
 export default function Login({ onAuthenticated }: Props) {
+  const [username, setUsername] = useState("local-admin");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -19,11 +20,11 @@ export default function Login({ onAuthenticated }: Props) {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ username, password }),
       });
 
       if (!response.ok) {
-        throw new Error("Invalid password or login unavailable");
+        throw new Error("Invalid credentials or login unavailable");
       }
 
       setPassword("");
@@ -40,11 +41,21 @@ export default function Login({ onAuthenticated }: Props) {
       <form className="login-card" onSubmit={submit}>
         <div className="login-logo">C</div>
         <h1>Welcome to ContextIQ</h1>
-        <p>Sign in to access your private knowledge workspace.</p>
+        <p>Sign in to your private knowledge workspace.</p>
 
-        <label htmlFor="admin-password">Administrator password</label>
+        <label htmlFor="username">Username</label>
         <input
-          id="admin-password"
+          id="username"
+          type="text"
+          value={username}
+          onChange={(event) => setUsername(event.target.value)}
+          autoComplete="username"
+          required
+        />
+
+        <label htmlFor="password">Password</label>
+        <input
+          id="password"
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
