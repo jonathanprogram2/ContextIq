@@ -13,6 +13,7 @@ from app.agentic import router as agent_router
 from app.auth import require_auth
 from app.auth import router as auth_router
 from app.documents import router as documents_router
+from app.jobs import router as jobs_router
 from app.rag import router as rag_router
 
 
@@ -46,6 +47,12 @@ app.include_router(
     agent_router,
     dependencies=[Depends(require_auth)],
 )
+
+app.include_router(
+    jobs_router,
+    dependencies=[Depends(require_auth)],
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
