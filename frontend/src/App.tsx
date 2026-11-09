@@ -4,6 +4,7 @@ import AskContextIQ from "./AskContextIQ";
 import "./App.css";
 import "./phase2.css";
 import Login from "./Login";
+import { apiFetch } from "./api";
 
 type Readiness = { status: string; checks: Record<string, string> };
 
@@ -90,7 +91,7 @@ export default function App() {
             type="button"
             className="nav-item"
             onClick={async () => {
-              const response = await fetch("/api/auth/logout", {
+              const response = await apiFetch("/api/auth/logout", {
                 method: "POST",
               });
 

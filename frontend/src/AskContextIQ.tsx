@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "./AskContextIQ.css";
+import { apiFetch } from "./api";
 
 type IndexState = { document_id: string; filename: string; chunks: number };
 type Source = {
@@ -38,9 +39,12 @@ export default function AskContextIQ() {
     setError("");
     setNotice("Generating embeddings locally. This can take some time.");
     try {
-      const response = await fetch(`/api/rag/index/${encodeURIComponent(id)}`, {
-        method: "POST",
-      });
+      const response = await apiFetch(
+        `/api/rag/index/${encodeURIComponent(id)}`,
+        {
+          method: "POST",
+        },
+      );
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail ?? "Indexing failed");
       setNotice(
@@ -60,7 +64,7 @@ export default function AskContextIQ() {
     setResult(null);
     setNotice("Searching local documents and generating an answer...");
     try {
-      const response = await fetch("/api/agent/ask", {
+      const response = await apiFetch("/api/agent/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

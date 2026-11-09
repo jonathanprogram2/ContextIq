@@ -58,9 +58,22 @@ app.add_middleware(
     secret_key=session_secret,
     session_cookie="contextiq_session",
     same_site="strict",
-    https_only=False,
+    https_only=os.getenv("CONTEXTIQ_COOKIE_SECURE", "0") == "1",
     max_age=3600,
 )
+
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
+
+    return response
 
 @app.get("/api/health")
 def health():

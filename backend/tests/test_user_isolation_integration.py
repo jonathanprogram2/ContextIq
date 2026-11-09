@@ -137,6 +137,13 @@ def test_cross_user_document_and_retrieval_isolation(
         login(client_a, data["username_a"], data["password"])
         login(client_b, data["username_b"], data["password"])
 
+        csrf_b = client_b.get("/api/auth/csrf")
+        assert csrf_b.status_code == 200
+
+        headers_b = {
+            "X-CSRF-Token": csrf_b.json()["csrf_token"]
+        }
+
         a_list = client_a.get("/api/documents")
         b_list = client_b.get("/api/documents")
 
@@ -163,12 +170,14 @@ def test_cross_user_document_and_retrieval_isolation(
 
         # Another user's document cannot be indexed.
         assert client_b.post(
-            f"/api/rag/index/{data['a_doc']}"
+            f"/api/rag/index/{data['a_doc']}",
+            headers=headers_b,
         ).status_code == 404
 
         # Another user's document cannot be deleted.
         assert client_b.delete(
-            f"/api/documents/{data['a_doc']}"
+            f"/api/documents/{data['a_doc']}",
+            headers=headers_b,
         ).status_code == 404
 
         # Index status lists only owned documents.
