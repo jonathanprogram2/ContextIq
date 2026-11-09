@@ -6,7 +6,6 @@ from uuid import uuid4
 
 import psycopg
 from dotenv import load_dotenv
-from psycopg import sql
 
 from app.documents import database_url
 
@@ -87,14 +86,6 @@ def setup_users():
             ALTER TABLE documents
             ALTER COLUMN owner_id SET NOT NULL
         """)
-
-        # Temporary compatibility with the single-admin upload API.
-        cur.execute(
-            sql.SQL(
-                "ALTER TABLE documents "
-                "ALTER COLUMN owner_id SET DEFAULT {}"
-            ).format(sql.Literal(admin_id))
-        )
 
         # Create the foreign key if not already present.
         cur.execute("""
