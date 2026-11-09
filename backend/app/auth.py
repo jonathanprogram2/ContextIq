@@ -1,6 +1,7 @@
-"""Local single-administrator authentication."""
+"""Database-backed authentication for local ContextIQ users."""
 
 import os
+from typing import Annotated
 from uuid import UUID
 
 import psycopg
@@ -13,81 +14,113 @@ router = APIRouter(prefix="/api/auth", tags=["authentication"])
 password_hash = PasswordHash.recommended()
 
 
-class LoginRequest(BaseModel):
-    password: str = Field(min_length=1, max_length=256)
-
-
-def require_auth(request: Request) -> None:
-    if request.session.get("user") != "local-admin":
-        raise HTTPException(
-            status_code=401,
-            detail="Authentication required",
-        )
-
-def current_user_id(request: Request) -> UUID:
-    """Resolve the authenticated session to a database user."""
-
-    require_auth(request)
-
-    username = request.session["user"]
-
-    url = os.getenv(
+def database_url() -> str:
+    return os.getenv(
         "DATABASE_URL",
         "postgresql://contextiq:localdev_only_change_me"
         "@127.0.0.1:5433/contextiq",
     )
 
+
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=80)
+    password: str = Field(min_length=1, max_length=256)
+
+
+def find_user_by_username(username: str) -> dict | None:
     with psycopg.connect(
-        url,
-        row_factory=dict_row,
+        database_url(), row_factory=dict_row
     ) as conn, conn.cursor() as cur:
         cur.execute(
             """
-            SELECT id
+            SELECT id, username, password_hash,
+                   role, session_version
             FROM users
             WHERE username = %s
             """,
             (username,),
         )
+        return cur.fetchone()
 
-        user = cur.fetchone()
 
-    if user is None:
-        raise HTTPException(
-            status_code=401,
-            detail="User account no longer exists",
+def find_user_by_id(user_id: UUID) -> dict | None:
+    with psycopg.connect(
+        database_url(), row_factory=dict_row
+    ) as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, username, role, session_version
+            FROM users
+            WHERE id = %s
+            """,
+            (user_id,),
         )
+        return cur.fetchone()
 
-    return user["id"]
+
+def require_auth(request: Request) -> dict:
+    """Validate the signed session against the current user record."""
+    raw_id = request.session.get("uid")
+    version = request.session.get("version")
+
+    if not isinstance(raw_id, str) or type(version) is not int:
+        raise HTTPException(401, "Authentication required")
+
+    try:
+        user_id = UUID(raw_id)
+    except ValueError as exc:
+        raise HTTPException(401, "Invalid session") from exc
+
+    user = find_user_by_id(user_id)
+
+    if user is None or user["session_version"] != version:
+        raise HTTPException(401, "Session expired or revoked")
+
+    return user
+
+
+def current_user_id(request: Request) -> UUID:
+    """Return the ID of the authenticated database user."""
+    return require_auth(request)["id"]
+
 
 @router.post("/login")
 def login(payload: LoginRequest, request: Request):
-    stored_hash = os.getenv("CONTEXTIQ_ADMIN_PASSWORD_HASH")
+    username = payload.username.strip().lower()
+    user = find_user_by_username(username)
 
-    if not stored_hash:
-        raise HTTPException(
-            status_code=503,
-            detail="Administrator authentication not configured",
-        )
-
-    if not password_hash.verify(payload.password, stored_hash):
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid credentials",
-        )
+    if user is None or not password_hash.verify(
+        payload.password, user["password_hash"]
+    ):
+        raise HTTPException(401, "Invalid credentials")
 
     request.session.clear()
-    request.session["user"] = "local-admin"
+    request.session["uid"] = str(user["id"])
+    request.session["version"] = user["session_version"]
 
-    return {"authenticated": True}
+    return {
+        "authenticated": True,
+        "username": user["username"],
+        "role": user["role"],
+    }
 
 
-@router.get("/me", dependencies=[Depends(require_auth)])
-def current_user():
-    return {"authenticated": True, "role": "admin"}
+@router.get("/me")
+def current_user(
+    user: Annotated[dict, Depends(require_auth)],
+):
+    return {
+        "authenticated": True,
+        "id": str(user["id"]),
+        "username": user["username"],
+        "role": user["role"],
+    }
 
 
-@router.post("/logout", dependencies=[Depends(require_auth)])
-def logout(request: Request):
+@router.post("/logout")
+def logout(
+    request: Request,
+    _user: Annotated[dict, Depends(require_auth)],
+):
     request.session.clear()
     return {"authenticated": False}
