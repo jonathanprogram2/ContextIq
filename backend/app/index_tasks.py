@@ -36,6 +36,62 @@ def update_job(
         )
 
 
+def claim_job(job_id: UUID, document_id: UUID, owner_id: UUID) -> bool:
+    """Atomically claim one queued job for execution."""
+
+    with psycopg.connect(database_url()) as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE document_index_jobs
+            SET status = 'running',
+                attempts = attempts + 1,
+                error = NULL,
+                updated_at = now()
+            WHERE id = %s
+              AND document_id = %s
+              AND owner_id = %s
+              AND status = 'queued'
+              AND EXISTS (
+                  SELECT 1
+                  FROM documents
+                  WHERE id = %s
+                    AND owner_id = %s
+              )
+            RETURNING id
+            """,
+            (
+                job_id,
+                document_id,
+                owner_id,
+                document_id,
+                owner_id,
+            ),
+        )
+
+        return cur.fetchone() is not None
+    
+
+def finish_job(
+    job_id: UUID,
+    status: str,
+    *,
+    error: str | None = None,
+) -> None:
+    """Record a result only for a currently running job."""
+
+    with psycopg.connect(database_url()) as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE document_index_jobs
+            SET status = %s,
+                error = %s,
+                updated_at = now()
+            WHERE id = %s
+              AND status = 'running'
+            """,
+            (status, error, job_id),
+        )
+
 @celery_app.task(
     bind=True,
     name="contextiq.index_document",
@@ -47,23 +103,20 @@ def index_document_job(
     document_id: str,
     owner_id: str,
 ):
-    """Run ownership-checked indexing outside FastAPI."""
+    """Execute only jobs atomically claimed from PostgreSQL."""
 
     job_uuid = UUID(job_id)
+    document_uuid = UUID(document_id)
+    owner_uuid = UUID(owner_id)
 
-    update_job(
-        job_uuid,
-        "running",
-        increment_attempts=True,
-    )
+    if not claim_job(job_uuid, document_uuid, owner_uuid):
+        return {
+            "status": "ignored",
+            "reason": "Job is not queued or no longer authorized",
+        }
 
     try:
-        # Reuse the existing indexing implementation.
-        # It rechecks ownership before writing embeddings.
-        result = index_document(
-            UUID(document_id),
-            UUID(owner_id),
-        )
+        result = index_document(document_uuid, owner_uuid)
 
     except Exception as exc:
         retryable = (
@@ -75,10 +128,10 @@ def index_document_job(
         )
 
         if retryable and self.request.retries < 2:
-            update_job(
+            finish_job(
                 job_uuid,
                 "queued",
-                error="Temporary service failure; retrying",
+                error="Temporary failure; retry scheduled",
             )
 
             raise self.retry(
@@ -86,13 +139,12 @@ def index_document_job(
                 countdown=5 * (2 ** self.request.retries),
             )
 
-        update_job(
+        finish_job(
             job_uuid,
             "failed",
-            error="Indexing failed; check worker logs",
+            error="Indexing failed; inspect worker logs",
         )
         raise
 
-    update_job(job_uuid, "succeeded")
-
+    finish_job(job_uuid, "succeeded")
     return result

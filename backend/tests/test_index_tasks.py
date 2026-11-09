@@ -1,21 +1,28 @@
-"""Deterministic background indexing task tests."""
+"""Deterministic Celery reliability tests."""
 
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException
 
 from app import index_tasks
 
 
 def test_index_job_succeeds(monkeypatch):
     events = []
-    job_id = uuid4()
-    document_id = uuid4()
-    owner_id = uuid4()
+    job_id, document_id, owner_id = (
+        uuid4(), uuid4(), uuid4()
+    )
 
     monkeypatch.setattr(
         index_tasks,
-        "update_job",
+        "claim_job",
+        lambda *args: True,
+    )
+
+    monkeypatch.setattr(
+        index_tasks,
+        "finish_job",
         lambda *args, **kwargs: events.append(
             (args, kwargs)
         ),
@@ -37,28 +44,58 @@ def test_index_job_succeeds(monkeypatch):
     )
 
     assert result["chunks_indexed"] == 4
-    assert events[0][0][1] == "running"
     assert events[-1][0][1] == "succeeded"
 
 
-def test_index_job_records_permanent_failure(monkeypatch):
-    events = []
-
-    def fail_indexing(document_id, owner_id):
-        raise ValueError("Synthetic indexing error")
+def test_duplicate_delivery_is_ignored(monkeypatch):
+    called = []
 
     monkeypatch.setattr(
         index_tasks,
-        "update_job",
-        lambda *args, **kwargs: events.append(
-            (args, kwargs)
-        ),
+        "claim_job",
+        lambda *args: False,
     )
 
     monkeypatch.setattr(
         index_tasks,
         "index_document",
-        fail_indexing,
+        lambda *args: called.append(True),
+    )
+
+    result = index_tasks.index_document_job.run(
+        str(uuid4()),
+        str(uuid4()),
+        str(uuid4()),
+    )
+
+    assert result["status"] == "ignored"
+    assert called == []
+
+
+def test_permanent_failure_is_recorded(monkeypatch):
+    statuses = []
+
+    monkeypatch.setattr(
+        index_tasks,
+        "claim_job",
+        lambda *args: True,
+    )
+
+    monkeypatch.setattr(
+        index_tasks,
+        "finish_job",
+        lambda job_id, status, **kwargs: statuses.append(
+            status
+        ),
+    )
+
+    def fail(*args):
+        raise ValueError("Synthetic processing error")
+
+    monkeypatch.setattr(
+        index_tasks,
+        "index_document",
+        fail,
     )
 
     with pytest.raises(ValueError):
@@ -68,4 +105,40 @@ def test_index_job_records_permanent_failure(monkeypatch):
             str(uuid4()),
         )
 
-    assert events[-1][0][1] == "failed"
+    assert statuses == ["failed"]
+
+
+def test_permanent_http_failure_is_recorded(monkeypatch):
+    statuses = []
+
+    monkeypatch.setattr(
+        index_tasks,
+        "claim_job",
+        lambda *args: True,
+    )
+
+    monkeypatch.setattr(
+        index_tasks,
+        "finish_job",
+        lambda job_id, status, **kwargs: statuses.append(
+            status
+        ),
+    )
+
+    def fail(*args):
+        raise HTTPException(404, "Document not found")
+
+    monkeypatch.setattr(
+        index_tasks,
+        "index_document",
+        fail,
+    )
+
+    with pytest.raises(HTTPException):
+        index_tasks.index_document_job.run(
+            str(uuid4()),
+            str(uuid4()),
+            str(uuid4()),
+        )
+
+    assert statuses == ["failed"]
