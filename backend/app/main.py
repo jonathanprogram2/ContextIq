@@ -1,6 +1,7 @@
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
+from time import perf_counter
 
 import httpx
 import psycopg
@@ -14,6 +15,13 @@ from app.auth import require_auth
 from app.auth import router as auth_router
 from app.documents import router as documents_router
 from app.jobs import router as jobs_router
+from app.metrics import (
+    HTTP_DURATION,
+    HTTP_REQUESTS,
+)
+from app.metrics import (
+    router as metrics_router,
+)
 from app.rag import router as rag_router
 
 
@@ -53,6 +61,8 @@ app.include_router(
     dependencies=[Depends(require_auth)],
 )
 
+app.include_router(metrics_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -71,6 +81,7 @@ app.add_middleware(
 
 @app.middleware("http")
 async def add_security_headers(request, call_next):
+    started = perf_counter()
     response = await call_next(request)
 
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -79,6 +90,23 @@ async def add_security_headers(request, call_next):
 
     if request.url.path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-store"
+
+    if request.url.path != "/metrics":
+        route = request.scope.get("route")
+        route_name = (
+            route.path if route is not None else "unmatched"
+        )
+
+        HTTP_REQUESTS.labels(
+            method=request.method,
+            route=route_name,
+            status=str(response.status_code),
+        ).inc()
+
+        HTTP_DURATION.labels(
+            method=request.method,
+            route=route_name,
+        ).observe(perf_counter() - started)
 
     return response
 
