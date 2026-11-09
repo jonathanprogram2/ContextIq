@@ -1,6 +1,7 @@
 """Hybrid pgvector + PostgreSQL full-text retrieval with reciprocal rank fusion."""
 
 import time
+from uuid import UUID
 
 import psycopg
 from psycopg.rows import dict_row
@@ -18,7 +19,7 @@ def reciprocal_rank_fusion(rankings: list[list[int]], k: int = 60) -> dict[int, 
     return scores
 
 
-def retrieve(question: str, top_k: int = 4, mode: str = "hybrid") -> dict:
+def retrieve(question: str, top_k: int = 4, mode: str = "hybrid", *, owner_id: UUID) -> dict:
     """Return grounded candidate metadata; mode is 'vector' or 'hybrid'."""
     if mode not in {"vector", "hybrid"}:
         raise ValueError("mode must be vector or hybrid")
@@ -28,33 +29,47 @@ def retrieve(question: str, top_k: int = 4, mode: str = "hybrid") -> dict:
     with psycopg.connect(database_url(), row_factory=dict_row) as conn, conn.cursor() as cur:
         cur.execute(
             """
-            SELECT c.id, c.document_id::text AS document_id, d.filename,
-                   c.page_number, c.text_content, 
-                   1 - (c.embedding <=> %s::vector) AS similarity
-            FROM document_chunks c JOIN documents d ON d.id = c.document_id
+            SELECT c.id,
+                c.document_id::text AS document_id,
+                d.filename,
+                c.page_number,
+                c.text_content,
+                1 - (c.embedding <=> %s::vector) AS similarity
+            FROM document_chunks c
+            JOIN documents d ON d.id = c.document_id
             WHERE c.embedding_model = %s
-            ORDER BY c.embedding <=> %s::vector LIMIT %s
+            AND d.owner_id = %s
+            ORDER BY c.embedding <=> %s::vector
+            LIMIT %s
             """,
-            (vector, EMBED_MODEL, vector, pool),
+            (vector, EMBED_MODEL, owner_id, vector, pool),
         )
         vector_hits = cur.fetchall()
         lexical_hits = []
         if mode == "hybrid":
             cur.execute(
-                """
-                SELECT c.id, c.document_id::text AS document_id, d.filename,
-                       c.page_number, c.text_content,
-                       ts_rank_cd(to_tsvector('english', c.text_content),
-                                  websearch_to_tsquery('english', %s)) AS lexical_rank
-                FROM document_chunks c JOIN documents d ON d.id = c.document_id
-                WHERE c.embedding_model = %s
-                  AND to_tsvector('english', c.text_content)
-                      @@ websearch_to_tsquery('english', %s)
-                ORDER BY lexical_rank DESC, c.id ASC LIMIT %s
-                """,
-                (question, EMBED_MODEL, question, pool),
-            )
-            lexical_hits = cur.fetchall()
+            """
+            SELECT c.id,
+                c.document_id::text AS document_id,
+                d.filename,
+                c.page_number,
+                c.text_content,
+                ts_rank_cd(
+                    to_tsvector('english', c.text_content),
+                    websearch_to_tsquery('english', %s)
+                ) AS lexical_rank
+            FROM document_chunks c
+            JOIN documents d ON d.id = c.document_id
+            WHERE c.embedding_model = %s
+            AND d.owner_id = %s
+            AND to_tsvector('english', c.text_content)
+                @@ websearch_to_tsquery('english', %s)
+            ORDER BY lexical_rank DESC, c.id ASC
+            LIMIT %s
+            """,
+            (question, EMBED_MODEL, owner_id, question, pool),
+        )
+        lexical_hits = cur.fetchall()
     by_id = {row["id"]: row for row in lexical_hits}
     by_id.update({row["id"]: row for row in vector_hits})
     scores = reciprocal_rank_fusion(

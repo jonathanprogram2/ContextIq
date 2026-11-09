@@ -2,13 +2,15 @@
 
 import json
 import os
-from typing import TypedDict
+from typing import Annotated, TypedDict
+from uuid import UUID
 
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 
+from app.auth import current_user_id
 from app.retrieval import retrieve
 
 router = APIRouter(prefix="/api/agent", tags=["agentic-rag"])
@@ -34,6 +36,7 @@ class AgentState(TypedDict, total=False):
     answer: str
     abstained: bool
     latency_ms: float
+    owner_id: UUID
 
 
 def local_chat(system: str, prompt: str) -> str:
@@ -52,7 +55,7 @@ def local_chat(system: str, prompt: str) -> str:
 
 
 def retrieve_node(state: AgentState) -> dict:
-    result = retrieve(state["search_query"], state["top_k"], state["mode"])
+    result = retrieve(state["search_query"], top_k=state["top_k"], mode=state["mode"], owner_id=state["owner_id"])
     return {"sources": result["sources"], "attempts": state.get("attempts", 0) + 1,
             "latency_ms": state.get("latency_ms", 0.0) + result["latency_ms"]}
 
@@ -136,10 +139,10 @@ workflow = build_graph()
 
 
 @router.post("/ask")
-def ask_agent(payload: AskRequest):
+def ask_agent(payload: AskRequest, owner_id: Annotated[UUID, Depends(current_user_id)]):
     result = workflow.invoke(
         {"question": payload.question.strip(), "search_query": payload.question.strip(),
-         "top_k": payload.top_k, "mode": payload.mode, "attempts": 0,
+         "top_k": payload.top_k, "mode": payload.mode, "owner_id": owner_id, "attempts": 0,
          "sources": [], "latency_ms": 0.0},
         config={"recursion_limit": 12},
     )

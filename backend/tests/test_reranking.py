@@ -1,3 +1,5 @@
+from uuid import UUID
+
 import pytest
 
 from app.reranking import reorder_candidates, retrieve_with_reranking
@@ -18,4 +20,9 @@ def test_reranking_rejects_mismatched_scores():
 
 def test_reranking_rejects_invalid_pool():
     with pytest.raises(ValueError):
-        retrieve_with_reranking("test", top_k=4, candidate_k=2)
+        retrieve_with_reranking(
+            "test",
+            top_k=4,
+            candidate_k=2,
+            owner_id=UUID("00000000-0000-0000-0000-000000000001"),
+        )

@@ -5,6 +5,7 @@ The model is loaded lazily and is not needed by the existing FastAPI routes.
 
 from functools import lru_cache
 from time import perf_counter
+from uuid import UUID
 
 from app.retrieval import retrieve
 
@@ -44,12 +45,14 @@ def retrieve_with_reranking(
     top_k: int = 4,
     candidate_k: int = 12,
     device: str = "cpu",
+    *,
+    owner_id: UUID,
 ) -> dict:
     """Retrieve a larger hybrid pool then cross-encoder rerank it."""
     if not 1 <= top_k <= candidate_k <= 32:
         raise ValueError("Require 1 <= top_k <= candidate_k <= 32")
     started = perf_counter()
-    first_stage = retrieve(question, top_k=candidate_k, mode="hybrid")
+    first_stage = retrieve(question, top_k=candidate_k, mode="hybrid", owner_id=owner_id)
     sources = rerank(question, first_stage["sources"], top_k, device=device)
     return {
         "sources": sources,

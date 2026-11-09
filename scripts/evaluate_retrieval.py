@@ -4,6 +4,7 @@ import argparse
 import json
 import statistics
 from pathlib import Path
+from uuid import UUID
 
 from app.retrieval import retrieve
 
@@ -21,6 +22,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", required=True, type=Path)
     parser.add_argument("--k", type=int, default=4)
+    parser.add_argument("--owner-id", required=True, type=UUID)
     args = parser.parse_args()
     if not 1 <= args.k <= 8:
         parser.error("--k must be between 1 and 8")
@@ -34,7 +36,7 @@ def main():
             relevant = set(case["relevant_chunk_ids"])
             if not relevant:
                 parser.error("Each case must have at least one verified relevant chunk ID")
-            response = retrieve(case["question"], top_k=args.k, mode=mode)
+            response = retrieve(case["question"], top_k=args.k, mode=mode, owner_id=args.owner_id)
             row = score_case([source["chunk_id"] for source in response["sources"]], relevant, args.k)
             row["latency_ms"] = response["latency_ms"]
             results.append(row)
