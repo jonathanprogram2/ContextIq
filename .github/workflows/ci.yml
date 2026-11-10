@@ -77,7 +77,7 @@ jobs:
       - name: Production build
         run: npm run build
 
-    python-security:
+  python-security:
     name: Python Security Audit
     runs-on: ubuntu-latest
     timeout-minutes: 25
