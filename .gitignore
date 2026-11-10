@@ -9,13 +9,10 @@ __pycache__/
 node_modules/
 dist/
 # Local configuration
-.env
-.env.*
 !.env.example
 backend/.env
 frontend/.env
 # Editors and system
-.vscode/
 .idea/
 .DS_Store
 Thumbs.db
@@ -39,3 +36,8 @@ crash.log
 
 # Keep provider dependency lockfiles tracked
 !.terraform.lock.hcl
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
+config.bat
