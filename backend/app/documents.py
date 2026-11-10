@@ -9,9 +9,11 @@ import psycopg
 import pymupdf
 from azure.core.exceptions import AzureError, ResourceNotFoundError
 from azure.storage.blob import BlobServiceClient, ContentSettings
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import Response
 from psycopg.rows import dict_row
+
+from app.auth import current_user_id
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 MAX_BYTES = 10 * 1024 * 1024
@@ -22,7 +24,27 @@ CONTAINER = "documents"
 def database_url():
     return os.getenv("DATABASE_URL", "postgresql://contextiq:localdev_only_change_me@127.0.0.1:5433/contextiq")
 
+def require_document_owner(
+    document_id: UUID,
+    owner_id: UUID,
+) -> None:
+    """Reject access to documents not owned by this user."""
 
+    with psycopg.connect(database_url()) as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT 1
+            FROM documents
+            WHERE id = %s AND owner_id = %s
+            """,
+            (document_id, owner_id),
+        )
+
+        if cur.fetchone() is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Document not found",
+            )
 
 
 def blob_client():
@@ -82,20 +104,24 @@ def setup_schema():
 
 
 @router.get("")
-def list_documents():
+def list_documents(
+    owner_id: Annotated[UUID, Depends(current_user_id)],
+):
     with psycopg.connect(database_url(), row_factory=dict_row
     ) as conn,conn.cursor() as cur:
             cur.execute("""
                 SELECT id::text, filename, size_bytes, page_count,
                        extracted_characters, status, created_at
-                FROM documents ORDER BY created_at DESC, filename
-            """)
+                FROM documents WHERE owner_id = %s ORDER BY created_at DESC, filename
+            """, (owner_id,),
+            )
             return [{**row, "created_at": row["created_at"].isoformat()} for row in cur.fetchall()]
 
 
 @router.post("", status_code=201)
 async def upload_document(
-    file: Annotated[UploadFile, File()]
+    file: Annotated[UploadFile, File()],
+    owner_id: Annotated[UUID, Depends(current_user_id)],
 ):
     filename = Path(file.filename or "").name
     if not filename.lower().endswith(".pdf") or file.content_type not in ("application/pdf", "application/octet-stream"):
@@ -125,9 +151,23 @@ async def upload_document(
         with psycopg.connect(database_url()) as conn, conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO documents
-                (id, filename, blob_name, sha256, size_bytes, page_count, extracted_characters, status)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """, (doc_id, filename, blob_name, hashlib.sha256(data).hexdigest(), len(data), len(pages), sum(map(len, pages)), "processed"))
+                (
+                    id, filename, blob_name, sha256, 
+                    size_bytes, page_count, 
+                    extracted_characters, status, owner_id
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, 
+            (
+                doc_id, 
+                filename, 
+                blob_name, 
+                hashlib.sha256(data).hexdigest(), 
+                len(data), 
+                len(pages), 
+                sum(map(len, pages)), 
+                "processed",
+                owner_id,))
             cur.executemany("""
                 INSERT INTO document_pages(document_id, page_number, text_content)
                 VALUES (%s, %s, %s)
@@ -142,11 +182,14 @@ async def upload_document(
 
 
 @router.get("/{document_id}/pages/{page_number}")
-def get_page(document_id: str, page_number: int):
+def get_page(document_id: str, page_number: int, owner_id: Annotated[UUID, Depends(current_user_id)]):
     try:
         key = UUID(document_id)
     except ValueError as exc:
         raise HTTPException(400, "Invalid document ID") from exc
+    
+    require_document_owner(key, owner_id)
+
     with psycopg.connect(
         database_url(), row_factory=dict_row
     ) as conn,conn.cursor() as cur:
@@ -158,15 +201,25 @@ def get_page(document_id: str, page_number: int):
 
 
 @router.get("/{document_id}/download")
-def download_document(document_id: str):
+def download_document(document_id: str, owner_id: Annotated[UUID, Depends(current_user_id)]):
     try:
         key = UUID(document_id)
     except ValueError as exc:
         raise HTTPException(400, "Invalid document ID") from exc
+    
+    require_document_owner(key, owner_id)
+
     with psycopg.connect(
         database_url(), row_factory=dict_row
     ) as conn, conn.cursor() as cur:
-        cur.execute("SELECT filename, blob_name FROM documents WHERE id=%s", (key,))
+        cur.execute(
+            """
+            SELECT filename, blob_name
+            FROM documents
+            WHERE id = %s AND owner_id = %s
+            """,
+            (key, owner_id),
+        )
         document = cur.fetchone()
     if not document:
         raise HTTPException(404, "Document not found")
@@ -178,14 +231,21 @@ def download_document(document_id: str):
     return Response(content=raw, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{safe_name}"'})
 
 @router.delete("/{document_id}", status_code=204)
-def delete_document(document_id: UUID):
+def delete_document(document_id: UUID, owner_id: Annotated[UUID, Depends(current_user_id)]):
+
+    require_document_owner(document_id, owner_id)
+
     with psycopg.connect(
         database_url(),
         row_factory=dict_row
     ) as conn, conn.cursor() as cur:
         cur.execute(
-            "SELECT blob_name FROM documents WHERE id = %s",
-            (document_id,)
+            """
+            SELECT blob_name
+            FROM documents
+            WHERE id = %s AND owner_id = %s
+            """,
+            (document_id, owner_id),
         )
         document = cur.fetchone()
 
@@ -213,6 +273,9 @@ def delete_document(document_id: UUID):
         # ON DELETE CASCADE removes document_pages
         # and document_chunks associated with this document.
         cur.execute(
-            "DELETE FROM documents WHERE id = %s",
-            (document_id,)
+            """
+            DELETE FROM documents
+            WHERE id = %s AND owner_id = %s
+            """,
+            (document_id, owner_id),
         )

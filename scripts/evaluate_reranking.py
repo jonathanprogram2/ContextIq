@@ -8,6 +8,7 @@ import json
 import statistics
 import time
 from pathlib import Path
+from uuid import UUID
 
 from app.reranking import retrieve_with_reranking
 from app.retrieval import retrieve
@@ -29,6 +30,7 @@ def main() -> None:
     parser.add_argument("--k", type=int, nargs="+", default=[1, 2, 4])
     parser.add_argument("--candidate-k", type=int, default=12)
     parser.add_argument("--device", choices=["cpu", "cuda"], default="cpu")
+    parser.add_argument("--owner-id", required=True, type=UUID)
     args = parser.parse_args()
     if any(k < 1 or k > args.candidate_k for k in args.k) or args.candidate_k > 32:
         parser.error("Require 1 <= each k <= candidate-k <= 32")
@@ -46,10 +48,10 @@ def main() -> None:
             parser.error(f"Question {index} lacks ground-truth chunk IDs")
         question = case["question"]
         t0 = time.perf_counter()
-        baseline = retrieve(question, top_k=args.candidate_k, mode="hybrid")
+        baseline = retrieve(question, top_k=args.candidate_k, mode="hybrid", owner_id=args.owner_id)
         baseline_ms = (time.perf_counter() - t0) * 1000
         improved = retrieve_with_reranking(
-            question, top_k=args.candidate_k, candidate_k=args.candidate_k, device=args.device
+            question, top_k=args.candidate_k, candidate_k=args.candidate_k, device=args.device, owner_id=args.owner_id
         )
         for name, sources, latency in (
             ("hybrid", baseline["sources"], baseline_ms),

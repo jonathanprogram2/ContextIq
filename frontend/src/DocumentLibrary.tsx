@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { apiFetch } from "./api";
 
 type DocumentItem = {
   id: string;
@@ -49,7 +50,7 @@ export default function DocumentLibrary() {
     try {
       const form = new FormData();
       form.append("file", file);
-      const response = await fetch("/api/documents", {
+      const response = await apiFetch("/api/documents", {
         method: "POST",
         body: form,
       });
@@ -93,7 +94,7 @@ export default function DocumentLibrary() {
     try {
       setError("");
 
-      const response = await fetch(`/api/documents/${id}`, {
+      const response = await apiFetch(`/api/documents/${id}`, {
         method: "DELETE",
       });
 

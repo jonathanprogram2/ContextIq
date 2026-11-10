@@ -1,14 +1,16 @@
 """Local baseline RAG: PDF chunks, Ollama embeddings, pgvector retrieval, cited answers."""
 
 import os
+from typing import Annotated
 from uuid import UUID
 
 import httpx
 import psycopg
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from psycopg.rows import dict_row
 from pydantic import BaseModel, Field
 
+from app.auth import current_user_id
 from app.documents import database_url
 
 router = APIRouter(prefix="/api/rag", tags=["rag"])
@@ -82,15 +84,27 @@ def vector_literal(vector: list[float]) -> str:
 
 
 @router.post("/index/{document_id}")
-def index_document(document_id: UUID):
+def index_document(document_id: UUID, owner_id: Annotated[UUID, Depends(current_user_id)]):
     with psycopg.connect(database_url(), row_factory=dict_row) as conn, conn.cursor() as cur:
-        cur.execute("SELECT id FROM documents WHERE id = %s", (document_id,))
+        cur.execute(
+            """
+            SELECT id
+            FROM documents
+            WHERE id = %s AND owner_id = %s
+            """,
+            (document_id, owner_id))
         if cur.fetchone() is None:
             raise HTTPException(404, "Document not found")
-        cur.execute("""
-            SELECT page_number, text_content FROM document_pages
-            WHERE document_id = %s ORDER BY page_number
-        """, (document_id,))
+        cur.execute(
+            """
+            SELECT p.page_number, p.text_content
+            FROM document_pages p
+            JOIN documents d ON d.id = p.document_id
+            WHERE p.document_id = %s
+            AND d.owner_id = %s
+            ORDER BY p.page_number
+            """,
+            (document_id, owner_id))
         pages = cur.fetchall()
     parts = [
         (page["page_number"], idx, chunk)
@@ -104,7 +118,37 @@ def index_document(document_id: UUID):
     for offset in range(0, len(parts), 8):
         vectors.extend(embed_texts([part[2] for part in parts[offset : offset + 8]]))
     with psycopg.connect(database_url()) as conn, conn.cursor() as cur:
-        cur.execute("DELETE FROM document_chunks WHERE document_id = %s", (document_id,))
+
+    # Recheck ownership and lock the document during indexing.
+        cur.execute(
+            """
+            SELECT id
+            FROM documents
+            WHERE id = %s AND owner_id = %s
+            FOR UPDATE
+            """,
+            (document_id, owner_id),
+        )
+
+        if cur.fetchone() is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Document not found",
+            )
+
+    
+        cur.execute(
+            """
+            DELETE FROM document_chunks
+            WHERE document_id = %s
+            AND EXISTS (
+                SELECT 1
+                FROM documents
+                WHERE id = %s AND owner_id = %s
+            )
+            """,
+            (document_id, document_id, owner_id),
+        )
         cur.executemany("""
             INSERT INTO document_chunks
                 (document_id, page_number, chunk_number, text_content, embedding, embedding_model)
@@ -117,32 +161,52 @@ def index_document(document_id: UUID):
 
 
 @router.get("/status")
-def index_status():
+def index_status(owner_id: Annotated[UUID, Depends(current_user_id)]):
     with psycopg.connect(database_url(), row_factory=dict_row) as conn, conn.cursor() as cur:
-        cur.execute("""
-            SELECT d.id::text AS document_id, d.filename,
+        cur.execute(
+            """
+            SELECT d.id::text AS document_id,
+                   d.filename,
                    COUNT(c.id)::integer AS chunks
-            FROM documents d LEFT JOIN document_chunks c ON c.document_id = d.id
-            GROUP BY d.id, d.filename ORDER BY d.filename
-        """)
+            FROM documents d
+            LEFT JOIN document_chunks c
+                ON c.document_id = d.id
+            WHERE d.owner_id = %s
+            GROUP BY d.id, d.filename
+            ORDER BY d.filename
+            """,
+            (owner_id,),
+        )
         return cur.fetchall()
 
 
 @router.post("/ask")
-def ask(payload: Question):
+def ask(payload: Question, owner_id: Annotated[UUID, Depends(current_user_id)]):
     question = payload.question.strip()
     if len(question) < 3:
         raise HTTPException(422, "Question too short")
     vector = vector_literal(embed_texts([question])[0])
     with psycopg.connect(database_url(), row_factory=dict_row) as conn, conn.cursor() as cur:
-        cur.execute("""
-            SELECT c.id, c.page_number, c.text_content, d.filename,
-                   d.id::text AS document_id,
-                   1 - (c.embedding <=> %s::vector) AS similarity
-            FROM document_chunks c JOIN documents d ON d.id = c.document_id
+        cur.execute(
+            """
+            SELECT c.id, c.page_number, c.text_content,
+                d.filename, d.id::text AS document_id,
+                1 - (c.embedding <=> %s::vector) AS similarity
+            FROM document_chunks c
+            JOIN documents d ON d.id = c.document_id
             WHERE c.embedding_model = %s
-            ORDER BY c.embedding <=> %s::vector LIMIT %s
-        """, (vector, EMBED_MODEL, vector, payload.top_k))
+            AND d.owner_id = %s
+            ORDER BY c.embedding <=> %s::vector
+            LIMIT %s
+            """,
+            (
+                vector,
+                EMBED_MODEL,
+                owner_id,
+                vector,
+                payload.top_k,
+            ),
+        )
         matches = cur.fetchall()
     if not matches or float(matches[0]["similarity"]) < 0.45:
         return {"answer": "I couldn't find enough supporting evidence in the indexed documents.", "sources": [], "abstained": True}

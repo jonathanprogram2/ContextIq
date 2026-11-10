@@ -1,6 +1,9 @@
 """CPU-only deterministic RAG tests; no Ollama or database required."""
+from uuid import UUID
+
 from fastapi.testclient import TestClient
 
+from app.auth import current_user_id, require_auth
 from app.main import app
 from app.rag import chunks_for_page, vector_literal
 
@@ -23,5 +26,20 @@ def test_vector_literal():
 
 
 def test_question_validation_before_inference():
-    response = client.post("/api/rag/ask", json={"question": "a"})
-    assert response.status_code == 422
+    app.dependency_overrides[require_auth] = lambda: None
+
+    app.dependency_overrides[current_user_id] = (
+        lambda: UUID("00000000-0000-0000-0000-000000000001")
+    )
+
+    try:
+        response = client.post(
+            "/api/rag/ask",
+            json={"question": "a"},
+        )
+
+        assert response.status_code == 422
+
+    finally:
+        app.dependency_overrides.pop(current_user_id, None)
+        app.dependency_overrides.pop(require_auth, None)

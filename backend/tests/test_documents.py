@@ -1,6 +1,10 @@
+from uuid import UUID
+
 import pymupdf
+import pytest
 from fastapi.testclient import TestClient
 
+from app.auth import current_user_id, require_auth
 from app.documents import parse_pdf
 from app.main import app
 
@@ -42,3 +46,19 @@ def test_oversized_pdf_rejected():
         files={"file": ("big.pdf", b"%PDF-" + b"x" * (10 * 1024 * 1024), "application/pdf")},
     )
     assert response.status_code == 413
+
+
+@pytest.fixture(autouse=True)
+def authenticated_document_tests():
+    # Simulate an authenticated administrator for PDF validation tests.
+    app.dependency_overrides[require_auth] = lambda: None
+
+    app.dependency_overrides[current_user_id] = (
+        lambda: UUID("00000000-0000-0000-0000-000000000001")
+    )
+
+    yield
+
+    # Restore normal authentication after each test.
+    app.dependency_overrides.pop(current_user_id, None)
+    app.dependency_overrides.pop(require_auth, None)

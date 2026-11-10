@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "./AskContextIQ.css";
+import { apiFetch } from "./api";
 
 type IndexState = { document_id: string; filename: string; chunks: number };
 type Source = {
@@ -11,6 +12,14 @@ type Source = {
   similarity: number;
 };
 type Answer = { answer: string; sources: Source[]; abstained: boolean };
+
+type IndexJob = {
+  job_id: string;
+  document_id: string;
+  status: "queued" | "running" | "succeeded" | "failed";
+  attempts: number;
+  error: string | null;
+};
 
 export default function AskContextIQ() {
   const [documents, setDocuments] = useState<IndexState[]>([]);
@@ -36,19 +45,67 @@ export default function AskContextIQ() {
   async function indexDocument(id: string) {
     setBusy(true);
     setError("");
-    setNotice("Generating embeddings locally. This can take some time.");
+    setNotice("Submitting background indexing job...");
+
     try {
-      const response = await fetch(`/api/rag/index/${encodeURIComponent(id)}`, {
-        method: "POST",
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail ?? "Indexing failed");
-      setNotice(
-        `Indexed ${data.chunks_indexed} chunks using ${data.embedding_model}.`,
+      const response = await apiFetch(
+        `/api/jobs/index/${encodeURIComponent(id)}`,
+        { method: "POST" },
       );
-      await refresh();
+
+      const submission: { job_id: string } = await response.json();
+
+      if (!response.ok) {
+        throw new Error("Could not queue indexing job");
+      }
+
+      setNotice("Indexing job queued.");
+
+      let completed = false;
+
+      // Poll for up to five minutes.
+      for (let attempt = 0; attempt < 150; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        const statusResponse = await fetch(
+          `/api/jobs/${encodeURIComponent(submission.job_id)}`,
+          { cache: "no-store" },
+        );
+
+        if (!statusResponse.ok) {
+          throw new Error("Could not retrieve indexing job status");
+        }
+
+        const job: IndexJob = await statusResponse.json();
+
+        if (job.status === "queued") {
+          setNotice("Waiting for an available indexing worker...");
+        }
+
+        if (job.status === "running") {
+          setNotice(
+            `Generating embeddings in background (attempt ${job.attempts})...`,
+          );
+        }
+
+        if (job.status === "failed") {
+          throw new Error(job.error ?? "Background indexing failed");
+        }
+
+        if (job.status === "succeeded") {
+          completed = true;
+          setNotice("Document indexing completed successfully.");
+          await refresh();
+          break;
+        }
+      }
+
+      if (!completed) {
+        setNotice("Indexing is still pending. Check the job again later.");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Indexing failed");
+      setNotice("");
     } finally {
       setBusy(false);
     }
@@ -60,7 +117,7 @@ export default function AskContextIQ() {
     setResult(null);
     setNotice("Searching local documents and generating an answer...");
     try {
-      const response = await fetch("/api/agent/ask", {
+      const response = await apiFetch("/api/agent/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
