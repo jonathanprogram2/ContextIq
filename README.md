@@ -30,7 +30,6 @@
 | **AI architecture**   | LangGraph-controlled corrective RAG; local Qwen3 generation; `nomic-embed-text` embeddings                                                       |
 | **Data architecture** | PostgreSQL + pgvector, Azure-compatible local blob emulation, Redis job broker                                                                   |
 | **Engineering focus** | Authenticated data isolation, asynchronous processing, observability, reliability safeguards, tests and CI                                       |
-| **Cloud cost**        | **$0 required for the documented local development configuration**                                                                               |
 
 ## Screenshots
 
