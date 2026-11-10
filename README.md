@@ -34,47 +34,62 @@
 
 ## Screenshots
 
-A dedicated gallery for actual application captures. **Add real screenshots to `docs/screenshots/`** and uncomment the image links below. The image filenames are proposed; no screenshots are included or represented as real in this README yet.
-
-<!--
-When you have real captures, remove this comment wrapper to display the gallery.
+A visual walkthrough of ContextIQ's document intelligence interface and supporting engineering infrastructure.
 
 <table>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/screenshots/overview.png" alt="ContextIQ overview dashboard showing service readiness" width="100%"/>
-      <br/><strong>01 · Overview</strong>
+      <img src="docs/screenshots/overview.png" alt="ContextIQ Overview Dashboard" width="100%">
+      <br>
+      <strong>01 — Overview Dashboard</strong>
+      <br>
+      <sub>System health, service connectivity, and workspace navigation.</sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/screenshots/documents.png" alt="ContextIQ document upload and library" width="100%"/>
-      <br/><strong>02 · Document library</strong>
+      <img src="docs/screenshots/documents.png" alt="ContextIQ Document Library" width="100%">
+      <br>
+      <strong>02 — Document Library</strong>
+      <br>
+      <sub>PDF management, document metadata, and local storage.</sub>
     </td>
   </tr>
   <tr>
     <td align="center">
-      <img src="docs/screenshots/ask-contextiq.png" alt="Grounded answer with citations in the Ask ContextIQ interface" width="100%"/>
-      <br/><strong>03 · Agentic document Q&A</strong>
+      <img src="docs/screenshots/ask-contextiq.png" alt="ContextIQ AI Question Answering" width="100%">
+      <br>
+      <strong>03 — Agentic Document Intelligence</strong>
+      <br>
+      <sub>Evidence-grounded AI answers with document and page citations.</sub>
     </td>
     <td align="center">
-      <img src="docs/screenshots/grafana.png" alt="ContextIQ Prometheus metrics displayed in Grafana" width="100%"/>
-      <br/><strong>04 · Observability</strong>
+      <img src="docs/screenshots/grafana.png" alt="ContextIQ Grafana Dashboard" width="100%">
+      <br>
+      <strong>04 — System Observability</strong>
+      <br>
+      <sub>Prometheus and Grafana monitoring of API latency and indexing jobs.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/screenshots/indexing-job.png" alt="ContextIQ Background Indexing" width="100%">
+      <br>
+      <strong>05 — Asynchronous Indexing</strong>
+      <br>
+      <sub>Redis and Celery background processing with persistent job tracking.</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/github-actions.png" alt="ContextIQ GitHub Actions CI" width="100%">
+      <br>
+      <strong>06 — Automated Quality Assurance</strong>
+      <br>
+      <sub>GitHub Actions verification of tests, builds, and security audits.</sub>
     </td>
   </tr>
 </table>
 
-Optional additional screenshots:
-- docs/screenshots/login.png
-- docs/screenshots/indexing-job.png
-- docs/screenshots/github-actions.png
--->
-
-**Suggested captures:** overview dashboard, PDF library, cited question-answer interface, successful indexing job, Grafana monitoring, and green GitHub Actions checks. Use non-sensitive test documents and hide usernames or secrets.
-
 ## Why this project
 
 A basic "chat with PDF" demo often stops at sending a prompt to a model. ContextIQ extends that workflow with a persistent data model, source attribution, authenticated boundaries, background jobs, failure handling, and metrics.
-
-Its purpose is to demonstrate **AI application engineering**, not just prompt design.
 
 ### Core capabilities
 
